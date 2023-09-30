@@ -1,10 +1,9 @@
-// Ridwan Hussain - Program 2 hunt
+// Ridwan Hussain - Program 2 Hunt
 // Used pubs.opengroup.org opendir, readdir, stat, and other various examples
 // as references while making the program.
 // Jacob Koziej (EE'25) also gave me advice on using mmap 
 // Also referenced https://www.youtube.com/watch?v=m7E9piHcfr4
 #define MAXPATHNAMELENGTH 4096
-#define SIZEOFBUF 4096
 
 #include <dirent.h>
 #include <stdio.h>
@@ -16,137 +15,98 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-/* Program Checklist
- * 1. Get File Name, store file bytes and file contents
- * 2. opendir, readdir, closedir, fprintf, strlen, chdir
- * 3. Skip dirs that don't have r-x permissions. If original path name 
- * is not viewable, report critical error; target file must be readable 
- * as well.
- * 4. Seg faults when symlinked to a file in a directory with not proper perms
- * */
-
-int fileSize;
-int numOfBuffers;
-int targetFD;
-int targetIno;
-//struct stat statBuf, statLinkBuf;
-
-int searchDir(char* pathName);
-void fileContentMatch(char* entryPath, struct stat statBuf);
+void searchDir(char* pathName, char* target, int fileSize, int targetIno, int targetFD);
+void fileContentMatch(char* entryPath, struct stat statBuf, int targetFD, int fileSize, int symLink);
 
 int main(int argc, char *argv[]) {
-	//Synthax is hunt <targetPath> <startPath>
-	char *target = argv[1];
+	//Synthax is ./hunt <targetPath> <startPath>
+	char* target = argv[1];
 	char *startPath = argv[2];
 	struct stat statBuf;
 	stat(target, &statBuf);
-	fileSize = statBuf.st_size;
-	targetIno = statBuf.st_ino;
-	int targetNLinks;
+	int fileSize = statBuf.st_size;
+	int targetIno = statBuf.st_ino;
 	
-	targetFD = open(target, O_RDONLY, 0666);
-	searchDir(startPath);
+	//CHECK FOR ERROR HERE
+	int targetFD = open(target, O_RDONLY, 0666);
+	//
+
+	searchDir(startPath, target, fileSize, targetIno, targetFD);
+	close(targetFD);
 
 	return 0;
 }
 
-int searchDir(char* pathName) {
-
-	// Code was referenced from opendir and readdir pages on pubs.opengroup.org
+void searchDir(char* pathName, char* target, int fileSize, int targetIno, int targetFD) {
 	DIR *currentDir;
 	struct dirent *dirEntries;
 	if ((currentDir = opendir(pathName)) == NULL) {
-		printf("Current Dir - %s - is NULL. Print Error Message.\n", pathName);
-		exit(1);
+		printf("Can't Open %s, Permission Denied\n", pathName);
+		return;
 	}
 	char entryPath[MAXPATHNAMELENGTH];
-	int status;
 	struct stat statBuf, statLinkBuf;
 	while ((dirEntries = readdir(currentDir)) != NULL) {
-		printf("Looking at file: %s\n", dirEntries->d_name);
 		if (!(strcmp(dirEntries->d_name, ".")) || !(strcmp(dirEntries->d_name, ".."))) {
 			continue;
 		}
-		//Might need to replace `dirEntries->d_name` with `entryPath`
+		//EntryPath is the PathName + / + fileName
 		strcpy(entryPath, pathName);
 		strcat(entryPath, dirEntries->d_name);
-		printf("Entry Path: %s\n", entryPath);
-		if (stat(entryPath, &statBuf) == -1) {
-			if (lstat(entryPath, &statLinkBuf) == 0 && S_ISLNK(statLinkBuf.st_mode)) {
-				printf("We've hit a symbolic LINK!!!!!!!!!\n");
-				if ((statBuf.st_mode && S_IRUSR) && (statBuf.st_size == fileSize) && (statLinkBuf.st_mode && S_IRUSR)) {
-					printf("Same file Size!!!\n");
-					fileContentMatch(entryPath, statBuf);
-					/*int entryFD = open(entryPath, O_RDONLY, 0666);
-					char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
-					char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
-					//printf("fileTarget:\n-----------------------------------------------------\n%s", fileTarget);
-					//printf("fileEntry:\n-----------------------------------------------------\n%s", fileEntry);
-					if (!(strcmp(fileTarget, fileEntry))) {
-						printf("SAME FILE CONTENTS WOOOOOOOOOOOO\n");
-					}
-					close(entryFD);*/
-				}
-				//int readLinkN = readlink(entryPath, 
-			} else {
-				printf("Could not find the item: \"%s, %s\".\n", entryPath, pathName);
-				printf("Error #: %d, String Error: %s\n", errno, strerror(errno));
-				//exit(2);
-			}
+		if (stat(entryPath, &statBuf) == -1 || lstat(entryPath, &statLinkBuf) == -1) {
+			printf("Could not stat the item: %s.\n", entryPath);
+			printf("Error #: %d, String Error: %s\n", errno, strerror(errno));
 		} else if (S_ISDIR(statBuf.st_mode)) { //Check if entry is a directory
 			strcat(entryPath, "/");
 			if (statBuf.st_mode && (S_IRUSR || S_IXUSR)) {
-				searchDir(entryPath);
+				searchDir(entryPath, target, fileSize, targetIno, targetFD);
 			} else {
 				printf("Do not have proper permissions for opening file directory.\n");
-				exit(3);
 			}
-		// if we have good permissions, assume person running the code is user
-		//permissions = S_IRUSR, use && 
+		//Check for read permissions, assume person running the code is user
 		} else if (!(statBuf.st_mode && S_IRUSR)) {
-			printf("Do not have proper permissions\n");
-			exit(4);
+			printf("Do not have proper permissions for %s\n", entryPath);
+		} else if (S_ISLNK(statLinkBuf.st_mode)) {
+				if (!(S_ISREG(statBuf.st_mode))){
+					printf("Symlink, %s, does not point to file, so it was skipped.\n", entryPath);
+				} else if ((statBuf.st_mode && statLinkBuf.st_mode && S_IRUSR) && (statBuf.st_size == fileSize)) {
+					fileContentMatch(entryPath, statBuf, targetFD, fileSize, 1);
+				}
 		} else if (S_ISREG(statBuf.st_mode)) {
 			if (statBuf.st_size == fileSize) {
-//				printf("Same file Size!!!\n");
-				if (statBuf.st_ino == targetIno) {
-					printf("Pathname: %s, Hard Link to File, File has %d nlinks.\n", entryPath, statBuf.st_nlink);
+				if ((statBuf.st_ino == targetIno)) {
+					if (!strcmp(entryPath, target)) {
+						printf("Found original Target File!\nPathname: %s\n\n", entryPath);
+					} else {
+						printf("Pathname: %s\nHARD LINK to Target\nFile has %d nlinks\n\n", entryPath, statBuf.st_nlink);
+					}
 				} else {
-					fileContentMatch(entryPath, statBuf);
-					/*int entryFD = open(entryPath, O_RDONLY, 0666);
-					char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
-					char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
-					//printf("fileTarget:\n-----------------------------------------------------\n%s", fileTarget);
-					//printf("fileEntry:\n-----------------------------------------------------\n%s", fileEntry);
-					if (!(strcmp(fileTarget, fileEntry))) {
-//						printf("SAME FILE CONTENTS WOOOOOOOOOOOO\n");
-						printf("Pathname: %s, File Matches Target, File has %d nlinks", entryPath, statBuf.st_nlink); 
-					} 
-					close(entryFD);*/
+					fileContentMatch(entryPath, statBuf, targetFD, fileSize, 0);
 				}
 			}
 		} else {
-			printf("Item is not a directory, file, or link.\n");
+			printf("Item, %s, is not a directory, file, or link, so it was skipped.\n", entryPath);
 		}
 	}
-	
 	if (closedir(currentDir) == -1) {
-		printf("PRINT ERROR MESSAGE!");
-		printf("Error #: %d, String Error: %s", errno, strerror(errno));
+		printf("Error Closing Dir, Error #: %d, String Error: %s\n", errno, strerror(errno));
 	}
 }
 
-int readFile () {
-
-}
-
-void fileContentMatch(char* entryPath, struct stat statBuf) {
-	printf("Same file Size!!!\n");
+void fileContentMatch(char* entryPath, struct stat statBuf, int targetFD, int fileSize, int symLink) {
 	int entryFD = open(entryPath, O_RDONLY, 0666);
 	char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
 	char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
 	if (!(strcmp(fileTarget, fileEntry))) {
-		printf("Pathname: %s, File Matches Target, File has %d nlinks\n", entryPath, statBuf.st_nlink); 
+		printf("Pathname: %s\nFile MATCHES Target", entryPath);
+		if (statBuf.st_nlink > 1) {
+			printf("\nFile has %d nlinks", statBuf.st_nlink);
+		}
+		if (symLink) {
+			printf("\nFile was a SymLink\n\n");
+		} else {
+			printf("\n\n");
+		}
 	} 
 	close(entryFD);
 }
