@@ -28,8 +28,11 @@
 int fileSize;
 int numOfBuffers;
 int targetFD;
+int targetIno;
+//struct stat statBuf, statLinkBuf;
 
 int searchDir(char* pathName);
+void fileContentMatch(char* entryPath, struct stat statBuf);
 
 int main(int argc, char *argv[]) {
 	//Synthax is hunt <targetPath> <startPath>
@@ -38,6 +41,7 @@ int main(int argc, char *argv[]) {
 	struct stat statBuf;
 	stat(target, &statBuf);
 	fileSize = statBuf.st_size;
+	targetIno = statBuf.st_ino;
 	int targetNLinks;
 	
 	targetFD = open(target, O_RDONLY, 0666);
@@ -55,9 +59,9 @@ int searchDir(char* pathName) {
 		printf("Current Dir - %s - is NULL. Print Error Message.\n", pathName);
 		exit(1);
 	}
-	struct stat statBuf, statLinkBuf;
 	char entryPath[MAXPATHNAMELENGTH];
 	int status;
+	struct stat statBuf, statLinkBuf;
 	while ((dirEntries = readdir(currentDir)) != NULL) {
 		printf("Looking at file: %s\n", dirEntries->d_name);
 		if (!(strcmp(dirEntries->d_name, ".")) || !(strcmp(dirEntries->d_name, ".."))) {
@@ -70,9 +74,10 @@ int searchDir(char* pathName) {
 		if (stat(entryPath, &statBuf) == -1) {
 			if (lstat(entryPath, &statLinkBuf) == 0 && S_ISLNK(statLinkBuf.st_mode)) {
 				printf("We've hit a symbolic LINK!!!!!!!!!\n");
-				if (statBuf.st_size == fileSize) {
+				if ((statBuf.st_mode && S_IRUSR) && (statBuf.st_size == fileSize) && (statLinkBuf.st_mode && S_IRUSR)) {
 					printf("Same file Size!!!\n");
-					int entryFD = open(entryPath, O_RDONLY, 0666);
+					fileContentMatch(entryPath, statBuf);
+					/*int entryFD = open(entryPath, O_RDONLY, 0666);
 					char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
 					char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
 					//printf("fileTarget:\n-----------------------------------------------------\n%s", fileTarget);
@@ -80,7 +85,7 @@ int searchDir(char* pathName) {
 					if (!(strcmp(fileTarget, fileEntry))) {
 						printf("SAME FILE CONTENTS WOOOOOOOOOOOO\n");
 					}
-					close(entryFD);
+					close(entryFD);*/
 				}
 				//int readLinkN = readlink(entryPath, 
 			} else {
@@ -103,17 +108,25 @@ int searchDir(char* pathName) {
 			exit(4);
 		} else if (S_ISREG(statBuf.st_mode)) {
 			if (statBuf.st_size == fileSize) {
-				printf("Same file Size!!!\n");
-				int entryFD = open(entryPath, O_RDONLY, 0666);
-				char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
-				char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
-				//printf("fileTarget:\n-----------------------------------------------------\n%s", fileTarget);
-				//printf("fileEntry:\n-----------------------------------------------------\n%s", fileEntry);
-				if (!(strcmp(fileTarget, fileEntry))) {
-					printf("SAME FILE CONTENTS WOOOOOOOOOOOO\n");
+//				printf("Same file Size!!!\n");
+				if (statBuf.st_ino == targetIno) {
+					printf("Pathname: %s, Hard Link to File, File has %d nlinks.\n", entryPath, statBuf.st_nlink);
+				} else {
+					fileContentMatch(entryPath, statBuf);
+					/*int entryFD = open(entryPath, O_RDONLY, 0666);
+					char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
+					char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
+					//printf("fileTarget:\n-----------------------------------------------------\n%s", fileTarget);
+					//printf("fileEntry:\n-----------------------------------------------------\n%s", fileEntry);
+					if (!(strcmp(fileTarget, fileEntry))) {
+//						printf("SAME FILE CONTENTS WOOOOOOOOOOOO\n");
+						printf("Pathname: %s, File Matches Target, File has %d nlinks", entryPath, statBuf.st_nlink); 
+					} 
+					close(entryFD);*/
 				}
-				close(entryFD);
 			}
+		} else {
+			printf("Item is not a directory, file, or link.\n");
 		}
 	}
 	
@@ -125,4 +138,15 @@ int searchDir(char* pathName) {
 
 int readFile () {
 
+}
+
+void fileContentMatch(char* entryPath, struct stat statBuf) {
+	printf("Same file Size!!!\n");
+	int entryFD = open(entryPath, O_RDONLY, 0666);
+	char *fileTarget = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, targetFD, 0);
+	char *fileEntry = mmap(NULL, fileSize, PROT_READ, MAP_PRIVATE, entryFD, 0);
+	if (!(strcmp(fileTarget, fileEntry))) {
+		printf("Pathname: %s, File Matches Target, File has %d nlinks\n", entryPath, statBuf.st_nlink); 
+	} 
+	close(entryFD);
 }
