@@ -1,0 +1,29 @@
+# Program Requirements
+- [ ] Given a name of an existing file and a starting pathname, find the locations of ALL of the identical files to the given file
+    - [ ] Two files are identical is they share the same content byte wise
+    - [ ] Metadata does not impact if two files ar identical
+- [ ] Should only look at Regular Files and Symlinks
+- [ ] If a file is found, print to standard output:
+    - [ ] pathname of the matching file
+        - [ ] Absolute pathname = absolute pathname, relative pathname = relative pathname
+    - [ ] if link count > 1 AND there's a hard link, output this
+    - [ ] Otherwise, if they have the same contents, output the nlink of the matching file
+    - [ ] If you encounter a symlink:
+        - [ ] "symlink resolves to original target file inode, report this" (?)
+        - [ ] symlink resolves to distinct inode which is identical to the content of the given file
+            - [ ] report this 
+            - [ ] report contents of symlink
+        - [ ] DO NOT FOLLOW SYMLINKS TO AVOID LOOPS
+- [ ] Distinguishing between critical and non-critical errors
+    - [ ] Can't open given file ==> Critical
+    - [ ] Can't open directory ==> Non-critical
+    - [ ] Report all errors to stderror with the 4 basic information from Unit 1
+        - [ ] Info #1
+        - [ ] Info #2
+        - [ ] Info #3
+        - [ ] Info #4
+- [ ] Be as efficient, skip reading file contents when possible
+- [ ] Should work on binary files
+- [ ] Useful commands: opendir, readdir, closedir, fprintf, strlen
+- [ ] See problem set for useful output
+
