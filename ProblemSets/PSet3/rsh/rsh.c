@@ -127,6 +127,7 @@ int cmdLine(char* cmdline, int prevStatus) {
 
 int binCmd(char* cmd, char* cmdline) { 
 	int pid;
+	//start real time stuff here
 	switch (pid = fork()) {
 		case -1:
 			//Give more info on this
@@ -142,6 +143,7 @@ int binCmd(char* cmd, char* cmdline) {
 			break;
 		default: 
 			/*Parent logic wait stuff*/
+			//gettimeofday or clock
 			fprintf(stdout, "Inside parent program.\n");
 			struct rusage ru;
 			unsigned wstatus;
