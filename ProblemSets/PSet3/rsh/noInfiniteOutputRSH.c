@@ -90,11 +90,12 @@ int shell(char* scripts) {
 		free(scripts);
 		return errno;
 	}
-	char userInput[BUFSIZE]; int c;
-	while(11) { //forever loop
+	char userInput[BUFSIZE];
+	int counter = 0; int c;
+	while(counter < 5) { //forever loop
 		fprintf(stdout, "While loop runnin.\n");
 		//strcpy(userInput, "\0");
-		while ((fgets(userInput, BUFSIZE, stdin)) == NULL) {
+		while((fgets(userInput, BUFSIZE, stdin)) == NULL) {
 			while ((c = getchar()) != '\n' && c != EOF);
 		}//Referenced GeeksForGeeks for how to use fgets: https://www.geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
 		if (userInput == NULL || strlen(userInput) == 1) {
@@ -118,6 +119,7 @@ int shell(char* scripts) {
 		fprintf(stderr, "UserInput: |%s|\n", userInput);
 		status = cmdLine(userInput, status);
 		//while ((c = getchar()) != '\n' && c != EOF && c != '\0') { }
+		counter++;
 	}
 	return status; //this returns after all the scripts have been read if there were scripts
 }
@@ -126,7 +128,6 @@ int cmdLine(char* cmdline, int prevStatus) {
 	//Referenced GeeksForGeeks on how to use strtok: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
 	char delim[] = " ";	char *(args[numOfArgs+1]); 
 	args[0] = strtok(cmdline, delim); args[numOfArgs] = NULL;
-	int fd[numOfArgs]; fd[0] = 0;
 	//char* cmd = strtok(cmdline, delim);
 	//char* input = strtok(0, delim);
 	int pid;
@@ -136,7 +137,7 @@ int cmdLine(char* cmdline, int prevStatus) {
 		//input = strtok(0, delim);
 		//PRINT DEBUGGING GOING ON HERE
 		fprintf(stderr, "Before redirect args[%d] = |%s|\n", i, args[i]);
-		redirect(&(args[i]), &fd[i]);
+		redirect(&(args[i]), &originalFD);
 		fprintf(stderr, "After redirect args[%d] = |%s|\n", i, args[i]);
 	}
 	//start real time stuff here
@@ -192,13 +193,7 @@ int cmdLine(char* cmdline, int prevStatus) {
 						return WEXITSTATUS(wstatus);
 					}
 				}
-				fprintf(stderr, "Exited with ZERO return value :D\n");
-				for (int i = 0; i < numOfArgs; i++) {
-					if (fd[i]) {
-						close(fd[i]);
-					}
-				}
-				//close(originalFD);
+				close(originalFD);
 				return wstatus; //should be 0 at this point
 		}
 	}
@@ -208,10 +203,10 @@ int binCmd(char** args) {
 	fprintf(stderr, "Inside child program for binCmd\n");
 	if (execvp(args[0], args) == -1) {
 		fprintf(stderr, "Execvp Failed for CMD: %s\nErrno: %d, Strerror: %s\n", args[0], errno, strerror(errno));
-		return errno;
+		exit(errno);
 	}
 	fprintf(stderr, "Command ran successfully.\n");
-	return 0;
+	exit(0);
 }
 
 int cd(char** args) { 
@@ -241,7 +236,7 @@ int pwd() {
 	return 0;
 }
 
-int redirect(char** input, int* originalFD) {
+int redirect(char** input, int *originalFD) {
 	//(input)    0 - no redirection 
 	//(<input)   1 - openfile & redirect stdin
 	//(>input)   2 - open/create/truncate file and redirect stdout
@@ -254,35 +249,35 @@ int redirect(char** input, int* originalFD) {
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_RDONLY);	
 		dup2(*originalFD, 0);
-		//close(*originalFD);
+		close(*originalFD);
 		return 1;
 	} else if (!(strncmp(">", *input, 1))) {
 		*input += 1;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 		dup2(*originalFD, 1);
-		//close(*originalFD);
+		close(*originalFD);
 		return 2;
 	} else if (!(strncmp("2>", *input, 2))) {
 		*input += 2;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 		dup2(*originalFD, 2);
-		//close(*originalFD);
+		close(*originalFD);
 		return 3;
 	} else if (!(strncmp(">>", *input, 2))) {
 		*input += 2;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_APPEND, 0666);
 		dup2(*originalFD, 1);
-		//close(*originalFD);
+		close(*originalFD);
 		return 4;
 	} else if (!(strncmp("2>>", *input, 3))) {
 		*input += 3;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_APPEND, 0666);
 		dup2(*originalFD, 2);
-		//close(*originalFD);
+		close(*originalFD);
 		return 5;
 	}
 	fprintf(stderr, "Input: |%s|\n", *input);

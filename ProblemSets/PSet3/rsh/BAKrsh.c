@@ -23,14 +23,8 @@
 
 //Commands cat, ls, cd, pwd
 
-/* CURRENT KNOWN BUGS:
- * - EOF 
- * - Bin command with single input argument
- */
-
 #define BUFSIZE 4096
 int numOfArgs;
-int originalFD;
 
 #include <stdio.h>
 #include <string.h>
@@ -44,9 +38,11 @@ int originalFD;
 
 int shell(char* scripts);
 int cmdLine(char* cmd, int prevStatus);
-int binCmd(char** args); 
-int cd(char** args); 
-int pwd();
+//int cat(char* parameters);
+//int ls(char* parameters);
+int binCmd(char* cmd, char* input, char* delim);
+int cd(char* parameters, char* delim);
+int pwd(char* parameters);
 int redirect(char* *input, int* originalFD);
 
 int main(int argc, char* argv[]) {
@@ -90,72 +86,48 @@ int shell(char* scripts) {
 		free(scripts);
 		return errno;
 	}
-	char userInput[BUFSIZE]; int c;
-	while(11) { //forever loop
+	char userInput[BUFSIZE];
+	while(1) { //forever loop
 		fprintf(stdout, "While loop runnin.\n");
-		//strcpy(userInput, "\0");
-		while ((fgets(userInput, BUFSIZE, stdin)) == NULL) {
-			while ((c = getchar()) != '\n' && c != EOF);
-		}//Referenced GeeksForGeeks for how to use fgets: https://www.geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
-		if (userInput == NULL || strlen(userInput) == 1) {
-			status = 0;
-			fprintf(stdout, "Achieved if statement, returning.\n");
-			return 0; //continue;
-		}
-		fprintf(stderr, "Last \\n: %d, last char %c, strlen: %d\n", strcspn(userInput, "\n"), userInput[strlen(userInput)-1], strlen(userInput));
-		//userInput[strcspn(userInput, "\n")] = '\0'; //https://www.geeksforgeeks.org/removing-trailing-newline-character-from-fgets-input/
-		//userInput[strcspn(userInput, EOF)] = '\0';
-		userInput[strlen(userInput) - 1] = '\0';
-		//if (strcspn(userInput, EOF) == strlen(userInput) - 1)
+		//Reference GeeksForGeeks for how to use fgets: https://www.geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
+		fgets(userInput, BUFSIZE, stdin);
+		userInput[strcspn(userInput, "\n")] = '\0';
 		numOfArgs = 1;
 		for (int i = 0; i < strlen(userInput); i ++ ) {
 			if (userInput[i] == ' ') { numOfArgs++; }
 		}
-		/*if (numOfArgs == 1) {
-			numOfArgs++;
-		}*/
-		fprintf(stderr, "NumOfArgs: %d\n", numOfArgs);
-		fprintf(stderr, "UserInput: |%s|\n", userInput);
 		status = cmdLine(userInput, status);
-		//while ((c = getchar()) != '\n' && c != EOF && c != '\0') { }
 	}
 	return status; //this returns after all the scripts have been read if there were scripts
 }
 
 int cmdLine(char* cmdline, int prevStatus) { 
 	//Referenced GeeksForGeeks on how to use strtok: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
-	char delim[] = " ";	char *(args[numOfArgs+1]); 
-	args[0] = strtok(cmdline, delim); args[numOfArgs] = NULL;
-	int fd[numOfArgs]; fd[0] = 0;
-	//char* cmd = strtok(cmdline, delim);
-	//char* input = strtok(0, delim);
-	int pid;
-	fprintf(stdout, "numOfArgs: %d\nargs[0] = |%s|\n", numOfArgs, args[0]);
-	for (int i = 1; i < numOfArgs && args[i-1] != NULL; i++) {
-		args[i] = strtok(0, delim); 
-		//input = strtok(0, delim);
-		//PRINT DEBUGGING GOING ON HERE
-		fprintf(stderr, "Before redirect args[%d] = |%s|\n", i, args[i]);
-		redirect(&(args[i]), &fd[i]);
-		fprintf(stderr, "After redirect args[%d] = |%s|\n", i, args[i]);
-	}
-	//start real time stuff here
-	if (!(strcmp(args[0], "cd"))) {
+	char delim[] = " ";
+	char* cmd = strtok(cmdline, delim);
+	char* input = strtok(0, delim);
+	/*if (!(strcmp(cmd, "cat"))) {
+		fprintf(stdout, "Read cat.\n");
+		return cat(input);
+	} else if (!(strcmp(cmd, "ls"))) {
+		fprintf(stdout, "Read ls.\n");
+		return ls(input);
+	} else */if (!(strcmp(cmd, "cd"))) {
 		fprintf(stdout, "\nRead cd.\n");
-		return cd(args);
-	} else if (!(strcmp(args[0], "pwd"))) {
+		return cd(input, delim);
+	} else if (!(strcmp(cmd, "pwd"))) {
 		fprintf(stdout, "\nRead pwd.\n");
-		return pwd();
-	} else if (!(strncmp(args[0], "#", 1))) {
+		return pwd(input);
+	} else if (!(strcmp(cmd, "#"))) { //char cmp instead of strcmp
 		fprintf(stdout, "\nRead #.\n");
 		return prevStatus;
-	} else if (!(strcmp(args[0], "exit"))) {
+	} else if (!(strcmp(cmd, "exit"))) {
 		fprintf(stdout, "\nRead exit.\n");
-		if (prevStatus = atoi(args[1])) { //can cause SEG FAULTS
-			fprintf(stderr, "Exited program successfully with new value %d\n", prevStatus);
+		if (prevStatus = atoi(input)) {
+			fprintf(stdout, "Exited program successfully with new value %d\n", prevStatus);
 			exit(prevStatus);
-		} else if (args[1] == NULL) {
-			fprintf(stderr, "Exited program successfully with previous value %d\n", prevStatus);
+		} else if (input == NULL) {
+			fprintf(stdout, "Exited program successfully with previous value %d\n", prevStatus);
 			exit(prevStatus);
 		} else {
 			//Since errno is normally 0 or + value, I set status = -1 if there's an error with exiting.
@@ -163,85 +135,113 @@ int cmdLine(char* cmdline, int prevStatus) {
 			exit(-1);
 		}
 	} else {
-		switch (pid = fork()) {
-			case -1: 
-				//Give more info on this
-				fprintf(stderr, "Fork failed in binCmd.\n");
-				break;
-			case 0:
-				fprintf(stderr, "\nRead cmd: %s.\n", args[0]);
-				return binCmd(args);
-			default:
-				/*Parent logic wait stuff*/
-				//gettimeofday or clock
-				fprintf(stderr, "Inside parent program for binCmd.\n");
-				struct rusage ru;
-				unsigned wstatus;
-				if (wait4(pid, &wstatus, 0, &ru) == -1) {
-					fprintf(stderr, "Wait system call failed\n");
-					return errno;
-				}
-				fprintf(stderr, "Parent is done waiting.\n");
-				fprintf(stderr, "Child process %d, consumed time %ld.%.6d seconds of usertime \n", pid, ru.ru_utime.tv_sec, ru.ru_utime.tv_usec);
-				if (wstatus != 0) {
-					if (WIFSIGNALED(wstatus)) {
-						fprintf(stderr, "Exited with signal: %d\n", WTERMSIG(wstatus));
-						return WTERMSIG(wstatus);
-					} else {
-						fprintf(stderr, "Exited with non-zero return value: %d\n", WEXITSTATUS(wstatus));
-						return WEXITSTATUS(wstatus);
-					}
-				}
-				fprintf(stderr, "Exited with ZERO return value :D\n");
-				for (int i = 0; i < numOfArgs; i++) {
-					if (fd[i]) {
-						close(fd[i]);
-					}
-				}
-				//close(originalFD);
-				return wstatus; //should be 0 at this point
+		fprintf(stdout, "\nRead cmd: %s\n", cmd);
+		return binCmd(cmd, input, delim);
+	}
+}
+
+int binCmd(char* cmd, char* input, char* delim) { 
+	int pid, originalFD;
+	char *(args[numOfArgs+1]);
+	args[0] = cmd; 
+	args[numOfArgs] = NULL;
+	fprintf(stdout, "numOfArgs: %d\nargs[0] = |%s|\n", numOfArgs, args[0]);
+	for (int i = 1; i < numOfArgs; i++) {
+		if (input != 0) {
+			args[i] = input; 
+			input = strtok(0, delim);
+		} else {
+			break;
 		}
+		//PRINT DEBUGGING GOING ON HERE
+		fprintf(stderr, "Before redirect args[%d] = |%s|\n", i, args[i]);
+		redirect(&(args[i]), &originalFD);
+		fprintf(stderr, "After redirect args[%d] = |%s|\n", i, args[i]);
+	}
+	//start real time stuff here
+	switch (pid = fork()) {
+		case -1:
+			//Give more info on this
+			fprintf(stderr, "Fork failed in binCmd.\n");
+			break;
+		case 0:
+			/*child logic stuff*/
+			fprintf(stdout, "Inside child program for binCmd\n");
+			if (execvp(args[0], args) == -1) {
+				fprintf(stderr, "Execvp Failed.\n");
+				return -1;
+			}
+			break;
+		default: 
+			/*Parent logic wait stuff*/
+			//gettimeofday or clock
+			fprintf(stdout, "Inside parent program for binCmd.\n");
+			struct rusage ru;
+			int wstatus;
+			if (wait4(pid, &wstatus, 0, &ru) == -1) {
+				fprintf(stderr, "Wait system call failed\n");
+				return errno;
+			}
+			fprintf(stdout, "Parent is done waiting.\n");
+			fprintf(stdout, "Child process %d, consumed time %ld.%.6d seconds of usertime \n", pid, ru.ru_utime.tv_sec, ru.ru_utime.tv_usec);
+			if (wstatus != 0) {
+				if (WIFSIGNALED(wstatus)) {
+					fprintf(stderr, "Exited with signal: %d\n", WTERMSIG(wstatus));
+					return WTERMSIG(wstatus);
+				} else {
+					fprintf(stderr, "Exited with non-zero return value: %d\n", WEXITSTATUS(wstatus));
+					return WEXITSTATUS(wstatus);
+				}
+			}
+			close(originalFD);
+			return wstatus; //should be 0 at this point
 	}
 }
 
-int binCmd(char** args) { 
-	fprintf(stderr, "Inside child program for binCmd\n");
-	if (execvp(args[0], args) == -1) {
-		fprintf(stderr, "Execvp Failed for CMD: %s\nErrno: %d, Strerror: %s\n", args[0], errno, strerror(errno));
-		return errno;
-	}
-	fprintf(stderr, "Command ran successfully.\n");
-	return 0;
-}
-
-int cd(char** args) { 
+int cd(char* parameters, char* delim) { 
 	int pid;
-	fprintf(stdout, "Inside child for cd.\n");
-	fprintf(stderr, "Parameters: %s\n", args[1]);
-	if (args[1] == NULL) {
-		if (chdir(getenv("HOME")) == -1) {
-			fprintf(stderr, "Error with chdir for HOME\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
-			return errno;
-		}
-	} else if (chdir(args[1]) == -1) {
-		fprintf(stderr, "Error with chdir for path: %s\nErrno: %d, Strerr: %s\n", args[1], errno, strerror(errno));
-		return errno;
-	} 
-	return 0;
-}
-
-int pwd() { 
-	char cwd[BUFSIZE];
-	fprintf(stdout, "Inside child for pwd.\n");
-	if (getcwd(cwd, BUFSIZE) == NULL) {
-		fprintf(stderr, "Error with getcwd.\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
-		return errno;
+	switch (pid = fork()) {
+	case -1:
+		//Give more info on this
+		fprintf(stderr, "Fork failed in cd.\n");
+		break;			
+	case 0:
+		fprintf(stdout, "Inside child for cd.\n");
+		fprintf(stderr, "Parameters: %s\n", parameters);
+		if (chdir(parameters) == -1) {
+			fprintf(stderr, "Error with chdir for path: %s\nErrno: %d, Strerr: %s\n", parameters, errno, strerror(errno));
+			exit(errno);
+		} 
+		exit(0);
+	default:
+		fprintf(stdout, "Inside parent for cd.\n");
 	}
-	fprintf(stderr, "Path: %s\n", cwd);
-	return 0;
 }
 
-int redirect(char** input, int* originalFD) {
+
+int pwd(char* parameters) { 
+	int pid; char cwd[BUFSIZE];
+	switch (pid = fork()) {
+	case -1:
+		//Give more info on this
+		fprintf(stderr, "Fork failed in pwd.\n");
+		break;			
+	case 0:
+		fprintf(stdout, "Inside child for pwd.\n");
+		fprintf(stderr, "Parameters: %s\n", parameters);
+		if (getcwd(cwd, BUFSIZE) == NULL) {
+			fprintf(stderr, "Error with getcwd.\nErrno: %d, Strerr: %s\n", parameters, errno, strerror(errno));
+			exit(errno);
+		}
+		fprintf(stderr, "Path: %s\n", cwd);
+		exit(0);
+	default:
+		fprintf(stdout, "Inside parent for pwd.\n");
+	}
+}
+
+
+int redirect(char** input, int *originalFD) {
 	//(input)    0 - no redirection 
 	//(<input)   1 - openfile & redirect stdin
 	//(>input)   2 - open/create/truncate file and redirect stdout
@@ -249,43 +249,45 @@ int redirect(char** input, int* originalFD) {
 	//(>>input)  4 - open/create/append file and redirect stdout
 	//(2>>input) 5 - open/create/append file and redirect stderr
 	//dup3 for actual redirection with file descriptor table
+	fprintf(stdout, "In redirect function, returned value ");
 	if (!(strncmp("<", *input, 1))) {
 		*input += 1;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_RDONLY);	
 		dup2(*originalFD, 0);
-		//close(*originalFD);
+		fprintf(stdout, "1\n");
 		return 1;
 	} else if (!(strncmp(">", *input, 1))) {
 		*input += 1;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 		dup2(*originalFD, 1);
-		//close(*originalFD);
+		fprintf(stdout, "2\n");
 		return 2;
 	} else if (!(strncmp("2>", *input, 2))) {
 		*input += 2;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 		dup2(*originalFD, 2);
-		//close(*originalFD);
+		fprintf(stdout, "3\n");
 		return 3;
 	} else if (!(strncmp(">>", *input, 2))) {
 		*input += 2;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_APPEND, 0666);
 		dup2(*originalFD, 1);
-		//close(*originalFD);
+		fprintf(stdout, "4\n");
 		return 4;
 	} else if (!(strncmp("2>>", *input, 3))) {
 		*input += 3;
 		fprintf(stderr, "Input: |%s|\n", *input);
 		*originalFD = open(*input, O_WRONLY|O_CREAT|O_APPEND, 0666);
 		dup2(*originalFD, 2);
-		//close(*originalFD);
+		fprintf(stdout, "5\n");
 		return 5;
 	}
 	fprintf(stderr, "Input: |%s|\n", *input);
 	*originalFD = open(*input, O_RDONLY);
+	fprintf(stdout, "0\n");
 	return 0;
 }

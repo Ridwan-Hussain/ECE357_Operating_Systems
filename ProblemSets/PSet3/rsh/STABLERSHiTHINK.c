@@ -90,11 +90,12 @@ int shell(char* scripts) {
 		free(scripts);
 		return errno;
 	}
-	char userInput[BUFSIZE]; int c;
-	while(11) { //forever loop
+	char userInput[BUFSIZE];
+	int counter = 0; int c;
+	while(counter < 5) { //forever loop
 		fprintf(stdout, "While loop runnin.\n");
 		//strcpy(userInput, "\0");
-		while ((fgets(userInput, BUFSIZE, stdin)) == NULL) {
+		while((fgets(userInput, BUFSIZE, stdin)) == NULL) {
 			while ((c = getchar()) != '\n' && c != EOF);
 		}//Referenced GeeksForGeeks for how to use fgets: https://www.geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
 		if (userInput == NULL || strlen(userInput) == 1) {
@@ -118,6 +119,7 @@ int shell(char* scripts) {
 		fprintf(stderr, "UserInput: |%s|\n", userInput);
 		status = cmdLine(userInput, status);
 		//while ((c = getchar()) != '\n' && c != EOF && c != '\0') { }
+		counter++;
 	}
 	return status; //this returns after all the scripts have been read if there were scripts
 }
@@ -126,7 +128,7 @@ int cmdLine(char* cmdline, int prevStatus) {
 	//Referenced GeeksForGeeks on how to use strtok: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
 	char delim[] = " ";	char *(args[numOfArgs+1]); 
 	args[0] = strtok(cmdline, delim); args[numOfArgs] = NULL;
-	int fd[numOfArgs]; fd[0] = 0;
+	int fd[numOfArgs] = {0};
 	//char* cmd = strtok(cmdline, delim);
 	//char* input = strtok(0, delim);
 	int pid;
