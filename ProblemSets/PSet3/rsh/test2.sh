@@ -1,5 +1,5 @@
 #Change the line below to that it points to your shell
-#!./msh
+#!./rsh
 #/tmp always exists on UNIX systems and is 777, so this will work
 cd /tmp
 pwd
