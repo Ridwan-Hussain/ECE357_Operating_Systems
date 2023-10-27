@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 
 void wordSearch(FILE* dictFP) {
 	char* dictLine; size_t lineLen = 0;
-	char c; int lines = 0;
+	char c; int lines = 0; int nc = 8+2;
 	
 	//Count Number of lines
 	for (c = getc(dictFP); c != EOF; c = getc(dictFP)) {
@@ -35,16 +35,18 @@ void wordSearch(FILE* dictFP) {
 	rewind(dictFP);
 	
 	//Store dictionary into string array
-	int bufSize = 8 + 1; //The 8 is the char limit from wordgen, the +1 for \n
-	char dict[lines][bufSize+1]; //+1 here is for the \0 
+	//int nc = 8 + 1; //The 8 is the char limit from wordgen, the +1 for \n
+	char dict[lines][nc+2]; //+1 here is for the \0 
 	for (int i = 0; getline(&dictLine, &lineLen, dictFP) != EOF; i++) {
-		fprintf(stdout, "%s", dictLine);
-		strcpy(dict[i], dictLine);
+		fprintf(stdout, "%d --> |%s|", strlen(dictLine)-1, dictLine);
+		strncpy(dict[i], dictLine, strlen(dictLine)-1);
+		dict[i][strlen(dictLine)-1] = '\0';
+		fprintf(stdout, "Fin --> |%s|", dict[i]);
 	}
 
 	char userInput[nc+1];
 	while(1) {
-		while((fgets(userInput, bufSize, stdin) == NULL) {
+		while((fgets(userInput, nc, stdin) == NULL)) {
 			if ((c = getchar()) == EOF) {
 				fprintf(stdout, "\n");
 				return;
@@ -55,8 +57,9 @@ void wordSearch(FILE* dictFP) {
 			continue;
 		}
 		userInput[strlen(userInput) - 1] = '\0';
-
+		fprintf(stdout, "UserInput = |%s|\n", userInput);
 		for (int i = 0; i < lines; i++) {
+			fprintf(stdout, "|%s|\n", dict[i]);
 			if (!strcmp(userInput, dict[i])) {
 				fprintf(stdout, "Found a match: %s\n", dict[i]);
 			}
