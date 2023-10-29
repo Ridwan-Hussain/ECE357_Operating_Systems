@@ -38,17 +38,15 @@ void wordSearch(FILE* dictFP) {
 	//int nc = 8 + 1; //The 8 is the char limit from wordgen, the +1 for \n
 	char dict[lines][nc+2]; //+1 here is for the \0 
 	for (int i = 0; getline(&dictLine, &lineLen, dictFP) != EOF; i++) {
-		fprintf(stdout, "%d --> |%s|", strlen(dictLine)-1, dictLine);
 		strncpy(dict[i], dictLine, strlen(dictLine)-1);
 		dict[i][strlen(dictLine)-1] = '\0';
-		fprintf(stdout, "Fin --> |%s|", dict[i]);
 	}
 
-	char userInput[nc+1];
+	char userInput[nc+1]; int matches = 0;
 	while(1) {
 		while((fgets(userInput, nc, stdin) == NULL)) {
 			if ((c = getchar()) == EOF) {
-				fprintf(stdout, "\n");
+				fprintf(stdout, "Total Matches: %d\n", matches);
 				return;
 			}
 		}
@@ -57,11 +55,10 @@ void wordSearch(FILE* dictFP) {
 			continue;
 		}
 		userInput[strlen(userInput) - 1] = '\0';
-		fprintf(stdout, "UserInput = |%s|\n", userInput);
 		for (int i = 0; i < lines; i++) {
-			fprintf(stdout, "|%s|\n", dict[i]);
 			if (!strcmp(userInput, dict[i])) {
 				fprintf(stdout, "Found a match: %s\n", dict[i]);
+				matches++;
 			}
 		}
 		

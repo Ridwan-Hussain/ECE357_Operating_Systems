@@ -8,28 +8,44 @@
 					 //be only the value of nc.
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
-int pager();
+int pager(FILE* tty);
 
 int main() {		
-	pager();
-	return 0;
+	FILE* tty;
+	if (!(tty = fopen("/dev/tty", "r"))) {
+		fprintf(stdout, "Error opening terminal for standard input with read permissions\nerrno: %d, strerrer: %s\n", errno, strerror(errno));
+		return errno;
+	}
+	return pager(tty);
 }
 
-int pager() {
-	char userInput[BUFSIZE]; char c;
-	while ((c = getchar()) != EOF && c == '\n') {
+int pager(FILE* tty) {
+	char termInput[BUFSIZE]; char inputStream[BUFSIZE]; char c;
+	int flag = 1;
+	setbuf(tty, NULL); //Referenced from https://web.archive.org/web/20171126034853/http://beej.us/guide/bgc/output/html/multipage/setvbuf.html
+	while ((c = getchar()) != EOF && flag) {
 		for (int i = 0; i < 23; i++) {
-			if ((fgets(userInput, BUFSIZE, stdin)) == NULL) {
+			if ((fgets(inputStream, BUFSIZE, stdin)) == NULL) {
 				if ((c = getchar()) == EOF) {
 					fprintf(stdout, "Read intermediate EOF. Terminating.\n");
 					return 0;
 				}
 			} else {
-				fprintf(stdout, "%s", userInput);
+				fprintf(stdout, "%s", inputStream);
 			}
 		}
-		fprintf(stdout, "---Press RETURN for more---\n");
+		fprintf(stdout, "---Press RETURN for more---");
+		while ((c = fgetc(tty)) != '\n') { //Used as reference for fgetc: https://www.tutorialspoint.com/c_standard_library/c_function_fgetc.htm
+			//might need to use feof
+			if (c == 'q' || c == 'Q' || feof(tty)) {
+				fflush(tty); //empty out the buffer
+				return 0;
+			}
+		}
 	}
 	return 0;
 }
