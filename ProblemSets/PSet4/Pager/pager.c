@@ -25,13 +25,12 @@ int main() {
 
 int pager(FILE* tty) {
 	char termInput[BUFSIZE]; char inputStream[BUFSIZE]; char c;
-	int flag = 1;
 	setbuf(tty, NULL); //Referenced from https://web.archive.org/web/20171126034853/http://beej.us/guide/bgc/output/html/multipage/setvbuf.html
-	while ((c = getchar()) != EOF && flag) {
+	while ((c = getchar()) != EOF) {
+		fprintf(stdout, "%c", c); //print out the char that was overwritten by getchar()
 		for (int i = 0; i < 23; i++) {
 			if ((fgets(inputStream, BUFSIZE, stdin)) == NULL) {
 				if ((c = getchar()) == EOF) {
-					fprintf(stdout, "Read intermediate EOF. Terminating.\n");
 					return 0;
 				}
 			} else {
@@ -41,8 +40,7 @@ int pager(FILE* tty) {
 		fprintf(stdout, "---Press RETURN for more---");
 		while ((c = fgetc(tty)) != '\n') { //Used as reference for fgetc: https://www.tutorialspoint.com/c_standard_library/c_function_fgetc.htm
 			//might need to use feof
-			if (c == 'q' || c == 'Q' || feof(tty)) {
-				fflush(tty); //empty out the buffer
+			if (c == 'q' || c == 'Q' || c == EOF) {
 				return 0;
 			}
 		}

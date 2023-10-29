@@ -2,6 +2,8 @@
 //as potential matches, and check if those words appear in stdin. If a match occurs, 
 //echo the word to standard output.
 
+#define BUFSIZE 4096
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -24,7 +26,7 @@ int main(int argc, char* argv[]) {
 
 void wordSearch(FILE* dictFP) {
 	char* dictLine; size_t lineLen = 0;
-	char c; int lines = 0; int nc = 8+2;
+	char c; int lines = 0;
 	
 	//Count Number of lines
 	for (c = getc(dictFP); c != EOF; c = getc(dictFP)) {
@@ -35,16 +37,15 @@ void wordSearch(FILE* dictFP) {
 	rewind(dictFP);
 	
 	//Store dictionary into string array
-	//int nc = 8 + 1; //The 8 is the char limit from wordgen, the +1 for \n
-	char dict[lines][nc+2]; //+1 here is for the \0 
+	char dict[lines][BUFSIZE]; //+1 here is for the \0 
 	for (int i = 0; getline(&dictLine, &lineLen, dictFP) != EOF; i++) {
 		strncpy(dict[i], dictLine, strlen(dictLine)-1);
 		dict[i][strlen(dictLine)-1] = '\0';
 	}
 
-	char userInput[nc+1]; int matches = 0;
+	char userInput[BUFSIZE]; int matches = 0;
 	while(1) {
-		while((fgets(userInput, nc, stdin) == NULL)) {
+		while((fgets(userInput, BUFSIZE, stdin) == NULL)) {
 			if ((c = getchar()) == EOF) {
 				fprintf(stdout, "Total Matches: %d\n", matches);
 				return;
