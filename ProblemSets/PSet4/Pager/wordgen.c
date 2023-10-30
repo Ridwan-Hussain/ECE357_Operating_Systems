@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 int wordgen(int numOfWords, int nc);
 
@@ -17,9 +18,10 @@ int wordgen(int numOfWords, int nc) {
 	int infFlag = !(numOfWords); //if numOfWords = 0, run loop infinitely
 	int charASCII, wordLen;
 	char word[nc+1];
+	srand(time(NULL)); //Random seed generated from current time for "dynamic" randomness, from Prof. Hak
 	while (infFlag || numOfWords) {
 		//rand() function was referenced from https://www.javatpoint.com/random-function-in-c
-		wordLen = rand() / (RAND_MAX / nc + 1); //referenced from https://c-faq.com/lib/randrange.html
+		wordLen = (unsigned) (rand() % nc) + 1; //referenced from https://c-faq.com/lib/randrange.html
 		if (wordLen < 3) { //Minium wordLength is 3
 			wordLen = 3; 
 		}

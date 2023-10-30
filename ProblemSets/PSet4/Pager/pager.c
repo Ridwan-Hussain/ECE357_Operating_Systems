@@ -25,7 +25,6 @@ int main() {
 
 int pager(FILE* tty) {
 	char termInput[BUFSIZE]; char inputStream[BUFSIZE]; char c;
-	setbuf(tty, NULL); //Referenced from https://web.archive.org/web/20171126034853/http://beej.us/guide/bgc/output/html/multipage/setvbuf.html
 	while ((c = getchar()) != EOF) {
 		fprintf(stdout, "%c", c); //print out the char that was overwritten by getchar()
 		for (int i = 0; i < 23; i++) {
