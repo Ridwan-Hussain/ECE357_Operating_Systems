@@ -26,7 +26,7 @@ int wordgen(int numOfWords, int nc) {
 			wordLen = 3; 
 		}
 		for (int i = 0; i < wordLen; i++) {
-			charASCII = rand() / (RAND_MAX / 26 + 1); 
+			charASCII = (unsigned) (rand() % 26); 
 			word[i] = charASCII + 65; //+65 because that's where 'A' starts
 		}
 		word[wordLen] = '\0';

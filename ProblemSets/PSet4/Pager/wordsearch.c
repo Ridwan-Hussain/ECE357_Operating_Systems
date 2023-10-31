@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
 }
 
 void wordSearch(FILE* dictFP) {
+	fprintf(stderr, "In wordsearch program printing this ;).\n");
 	char* dictLine; size_t lineLen = 0;
 	char c; int lines = 0;
 	
@@ -35,6 +36,7 @@ void wordSearch(FILE* dictFP) {
 		}
 	}
 	rewind(dictFP);
+	fprintf(stderr, "In wordsearch program got line count.\n");
 	
 	//Store dictionary into string array
 	char dict[lines][BUFSIZE]; //+1 here is for the \0 
@@ -42,15 +44,19 @@ void wordSearch(FILE* dictFP) {
 		strncpy(dict[i], dictLine, strlen(dictLine)-1);
 		dict[i][strlen(dictLine)-1] = '\0';
 	}
+	fprintf(stderr, "In wordsearch program stored dict file.\n");
 
 	char userInput[BUFSIZE]; int matches = 0;
 	while(1) {
 		while((fgets(userInput, BUFSIZE, stdin) == NULL)) {
+			fprintf(stderr, "Fgets returns NULL.\n");
 			if ((c = getchar()) == EOF) {
+				fprintf(stderr, "Found EOF.\n");
 				fprintf(stdout, "Total Matches: %d\n", matches);
 				return;
 			}
 		}
+		fprintf(stderr, "Fgets returns: |%s|.\n", userInput);
 
 		if (userInput == NULL) { //maybe OR strlen(userInput) < 3)
 			continue;
@@ -62,7 +68,7 @@ void wordSearch(FILE* dictFP) {
 				matches++;
 			}
 		}
-		
+		fprintf(stderr, "In wordsearch program finished checking matches.\n");
 	}
 
 }
