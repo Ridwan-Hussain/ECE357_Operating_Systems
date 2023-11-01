@@ -37,7 +37,6 @@ int launcher(char wordgenArg[]) {
 			fprintf(stderr, "Fork failed for wordgen.\nErrno: %s, strerror: %s\n", errno, strerror(errno));
 			return(errno);
 		case 0: //wordgen, write pipe1[1]
-			fprintf(stdout, "In wordgen child.\n");
 			dup2(pipe1[1], 1);
 			close(pipe1[0]); close(pipe1[1]); close(pipe2[0]); close(pipe2[1]);
 			if (execlp("./wordgen", "./wordgen", wordgenArg, NULL) == -1) {
@@ -46,42 +45,39 @@ int launcher(char wordgenArg[]) {
 			}
 			break;
 		default:
-			fprintf(stdout, "First parent.\n");
-			waiting("wordgen", wordgenPID);
+			close(pipe1[1]);
 			
 	switch (wordsearchPID = fork()) {
 		case -1:
 			fprintf(stderr, "Fork failed for wordsearch.\nErrno: %s, strerror: %s\n", errno, strerror(errno));
 			return(errno);
 		case 0: //wordsearch, read pipe1[0], write pipe2[1];
-			fprintf(stdout, "In wordsearch child.\n");
 			dup2(pipe1[0], 0); dup2(pipe2[1], 1);
-			close(pipe1[0]); close(pipe1[1]); close(pipe2[0]); close(pipe2[1]);
-			if (execlp("./wordsearch", "./wordsearch", "dict.txt", NULL) == -1) {
+			close(pipe1[0]); close(pipe2[0]); close(pipe2[1]);
+			if (execlp("./wordsearch", "./wordsearch", "words.txt", NULL) == -1) {
 				fprintf(stderr, "Error with exec-ing wordsearch.\nErrno: %d, strerror: %s\n", errno, strerror(errno));
 				exit(errno);
 			}
 			break;
 		default: 
-			fprintf(stdout, "Second parent.\n");
-			waiting("wordsearch", wordsearchPID);
+			close(pipe1[0]); close(pipe2[1]);
 	
 	switch (pagerPID = fork()) {
 		case -1:
 			fprintf(stderr, "Fork failed for pager.\nErrno: %s, strerror: %s\n", errno, strerror(errno));
 			return(errno);
 		case 0: //pager, read pipe2[0]
-			fprintf(stdout, "In pager child.\n");
 			dup2(pipe2[0], 0);
-			close(pipe1[0]); close(pipe1[1]); close(pipe2[0]); close(pipe2[1]);
+			close(pipe2[0]);
 			if (execlp("./pager", "./pager", NULL) == -1) {
 				fprintf(stderr, "Error with exec-ing pager.\nErrno: %d, strerror: %s\n", errno, strerror(errno));
 				exit(errno);
 			}
 			break;
 		default: //main program logic
-			fprintf(stdout, "Final parent.\n");
+			close(pipe2[0]);	
 			waiting("pager", pagerPID);		
+			waiting("wordsearch", wordsearchPID);
 			break;
 		}}} //spaced out so code isn't a rat's nest.
 	return 0;	
@@ -90,7 +86,6 @@ int launcher(char wordgenArg[]) {
 int waiting(char* program, int pid) {
 	unsigned wstatus;
 	wait4(pid, &wstatus, 0, NULL);
-	fprintf(stdout, "Finished waiting for %s child.\n", program);
 	if (wstatus != 0) {
 		if (WIFSIGNALED(wstatus)) {
 			fprintf(stderr, "%s exited with signal: %d\n", program, WTERMSIG(wstatus));
@@ -99,5 +94,5 @@ int waiting(char* program, int pid) {
 			fprintf(stderr, "%s exited with return value: %d\n", program, WEXITSTATUS(wstatus));
 			exit(WEXITSTATUS(wstatus));
 		}
-	}
+	} 
 }

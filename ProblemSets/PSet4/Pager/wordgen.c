@@ -7,7 +7,7 @@
 int wordgen(int numOfWords, int nc);
 
 int main(int argc, char* argv[]) {
-	int nc = 6; //MAX NUMBER OF CHARACTERS FOR A WORD
+	int nc = 8; //MAX NUMBER OF CHARACTERS FOR A WORD
 	if (argc > 1) {
 		return wordgen(atoi(argv[1]), nc);
 	}

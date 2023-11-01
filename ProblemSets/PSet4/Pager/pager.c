@@ -4,8 +4,7 @@
 //the user can enter a line for more input or hit "q"/"Q" to 
 //quit the program.
 
-#define BUFSIZE 4096 //This is overkill and should realistically
-					 //be only the value of nc.
+#define BUFSIZE 4096 //This is overkill and should realistically be only the value of nc.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,8 +37,10 @@ int pager(FILE* tty) {
 		}
 		fprintf(stdout, "---Press RETURN for more---");
 		while ((c = fgetc(tty)) != '\n') { //Used as reference for fgetc: https://www.tutorialspoint.com/c_standard_library/c_function_fgetc.htm
-			//might need to use feof
-			if (c == 'q' || c == 'Q' || c == EOF) {
+			if (c == 'q' || c == 'Q') { 
+				return 0;
+			} else if (c == EOF) {
+				fprintf(stdout, "\n");
 				return 0;
 			}
 		}
