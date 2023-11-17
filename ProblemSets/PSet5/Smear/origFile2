@@ -1,0 +1,98 @@
+2A) One way to think about page frame reclamation / paging-out is that physical memory is a scarce, faster resource
+which caches virtual memory. As with any cache where cache capacity is scarce, we’d want the items that are in the
+cache to be the ones that are most likely to be used again soon. Conversely, we’d want to evict items from the cache
+based on a Least Recently Used (LRU) policy.
+Question to ponder: Does the scheme described in the lecture notes, with the use of the hardware PTE "A" bits and
+the PFRA algorithm, achieve true LRU behavior? If not, does it come close and how?
+
+The PFRA as described in class only 'approximates' LRU behavior, and does a fairly good job. Since the PFRA only runs 
+intermittently, it cannot know the exact order in which PTE's were accessed, instead only knowing a group of unused 
+PTE's. In addition, the PFRA loops through the list of page frames manually and the rate the PFRA does it can change, 
+but it doesn't have an internal clock that ticks to see how long ago the last time a page was accessed. By having a 
+buffering inactive list between the active the free lists prevents overactivity and PTE's have to remain unused for 
+two PFRA sweeps before it is cleared. 
+
+
+2B) In your own words, what does the radix-64 tree of the address_space data structure do? Under what
+circumstances is this data structure used during paging-in operations? Give an example of a situation where
+consultation of that data structure allows the kernel to resolve a page fault as a minor vs a major page fault.
+
+The radix-64 tree of the address_space stores PTE's for file mapped regions of memory. It is able to grow up to 6 levels and 
+does so once it needs to increase the size of the tree. The structure is used to quickly lookup if a particular page is already 
+stored in memory and is allocated for every open inode. For example, accessing a page in a file which has been opened already 
+by another process would require a major fault without this structure, while with this structure the fault would be resolved 
+as a minor fault.
+
+
+
+2C-H) Each of the following situations involves a page fault. Describe what happens in the kernel’s page fault handler. If 
+the page fault results in a signal, state what that signal is. If the page fault is resolved and does not cause
+a signal, state whether the resolution is a MAJOR or MinOR page fault:
+
+
+2C) A newly exec’d program begins execution and attempts to fetch the first opcode of the text region. The
+associated a.out file has not been accessed before by any other program.
+
+Since the a.out file has not yet been accessed the kernel will need to recursively allocate the PGD, PUD's, etc. 
+The resolution is a major fault. From the flow chart, the page faulted in a valid virtual address space in the virtual 
+machine, had the correct access bits, successfully plumbed, the PTE entries were not all 0s, the PTE present bit was 
+off, and the program was about to allocate a new page frame, so major fault.
+
+
+2D) A page in the BSS region is written to. This is the first access (read or write) to that particular virtual page
+during the lifetime of this program.
+
+From the flow chart, the page faulted in a valid virtual address space in the virtual machine, had the correct access 
+bits, successfully plumbed, the PTE entries were all 0s and the file was anonymous (characteristics of the BSS region),
+and assuming there was enough memory, there was a minor fault. 
+
+
+2E) Immediately after a fork() system call, the child process writes to a global variable which had been declared with
+an initializer. The variable had been read (but not written) prior to the fork, and the PFRA is not active so any
+previously faulted-in page frames are still resident.
+
+Because this occurred right after a fork, this is a copy-on-write (COW) situation, which is resolved by a minor fault. 
+From the flow chart, the page faulted in a valid virtual address space in the virtual machine, had the correct access 
+bits, successfully plumbed, the PTE entries weren't all 0s (global variable that WAS initialized), the PTE present bit
+is one, and assuming there is enough memory, this is a COW, which is a minor fault.
+
+
+2F) A file is mapped using the mmap system call with the MAP_SHARED option. The length of the mapping is
+16384 bytes and this is also the length of the file. After the mapping is established, the file is truncated to 0 bytes.
+Then the [4096] byte of the mapped region is accessed for reading.
+
+The 4096's byte of the file-mapped region is outside the bounds of the file, the kernel will see that and send a SIGBUS.
+From the flowchart, the page fault occurred inside a valid virtual address space within the virtual machine, it had the 
+correct permissions, assuming the plumbing occurred fine (there was enough memory), the PTE are all 0's, but this was 
+file-mapped. Since the region being accessed had a length of 0 (it was truncated), the 4096 byte region is beyond the
+file bounds, causing the program to send a SIGBUS.
+
+
+2G) The current size of the stack region is 8192 bytes on an X86-32 system. It extends from BFFFE000 -
+BFFFFFFF. The stack pointer is right at the edge of this region, at BFFFE000. Now we call another function.
+
+Because the stack has the MAP_GROWSDOWN flag enabled, and this stack pointer is at the edge of the stack region, the
+fault will be a minor fault. From the flow chart, the page fault occured in a non-valid virtual address space within
+the virtual machine, but since it is in the grows down region this is ok, it has the correct acces bits, assumed there
+was enough space for plumbing, the PTE are not all 0, the PTE present bit is on, so a minor fault occurs.
+
+
+2H) We run the following:
+main()
+{
+char *p;
+p=(char *)main;
+*p=41;
+}
+
+From the flowchart, the page fault occurred in a valid region, but it didn't have the proper permission (text region only 
+has read and executable permissions, not write-permissions) so the program throws a segmentation fault or SIGSEGV. 
+
+
+2I) We have read and written to a particular page in BSS. The PFRA is active and stole the page because we hadn’t
+subsequently accessed it for quite some time. Now we attempt to read that page.
+
+Since the PFRA has stolen the page it will need to paged in a major fault. From the flowchart, the page fault occurred in
+a valid virtual address space in the virtual machine, it had the correct permission bits, the plumbing went (unless the
+machine ran out of memory), the PTE were not all O's, the PTE present bit is on, and it was able to allocate a new page
+frame, so major page fault. 

@@ -19,7 +19,7 @@ void searchDir(char* pathName, char* target, int fileSize, int targetIno, int ta
 void fileContentMatch(char* entryPath, struct stat statBuf, int targetFD, int fileSize, int symLink);
 
 int main(int argc, char *argv[]) {
-	//Synthax is ./hunt <targetPath> <startPath>
+	//Syntax is ./hunt <targetPath> <startPath>
 	char* target = argv[1];
 	char *startPath = argv[2];
 	struct stat statBuf;
