@@ -1,0 +1,74 @@
+Ridwan Hussain & Nicholas Storniolo
+
+1. a. STU - Works because there's only a single processor & a single thread, preventing the program from moving on.
+b & c. MTSPU & MTMPU - Doesn't work all the time. One scenario is when there's a shared memory space, one thread can be blocked, but other threads can change the values of the shared memory space.
+d. SPK - Works because there's only one processor, which can be viewed as only having a single thread, making it similar to STU.
+e. MPK - Doesn't work because multiple processors is similar to having multiple threads, so they share the same shortcoming.
+
+2. a. If two programs reach the if statement at the same time, there can be multiple heads (doesn't matter if the current head is NULL or not).
+b. ```C
+struct ll {
+  struct ll_elem *head;
+};
+
+struct ll_elem {
+  struct ll_elem *fwd;
+  int payload;
+};
+
+void ll_insert(struct ll *ll,struct ll_elem *insert_after, struct ll_elem *new_elem) {
+  //Set Masks
+  sigset_t oldmask, newmask; 
+  sigfillset(&newmask); 
+
+  //Block signals
+  sigprocmask(SIG_BLOCK, &newmask, &oldmask);
+  
+  /* CRITICAL REGION: DATA ORIENTATED */
+  if (!insert_after) {
+    new_elem->fwd=ll->head;
+    ll->head=new_elem;
+  } else {
+    new_elem->fwd = insert_after->fwd;
+    insert_after->fwd = new_elem;
+  }
+  /* END OF CRITICAL REGION */
+  
+  //Unblock signals
+  sigprocmask(SIG_SETMASK, &oldmask, NULL);
+}
+```
+
+c.  ```C
+struct ll {
+  struct ll_elem *head;
+  int spinlock;
+};
+
+struct ll_elem {
+  struct ll_elem *fwd;
+  int payload;
+};
+
+void ll_insert(struct ll *ll,struct ll_elem *insert_after, struct ll_elem *new_elem) {
+  /* Brief instruction so spin lock */
+  // Try Lock
+  while(TAS(*ll->spinlock));
+  
+  //Close Lock
+  *ll->spinlock = 1;
+  
+  /* CRITICAL REGION: DATA ORIENTATED */
+  if (!insert_after) {
+    new_elem->fwd=ll->head;
+    ll->head=new_elem;
+  } else {
+    new_elem->fwd = insert_after->fwd;
+    insert_after->fwd = new_elem;
+  }
+  /* END OF CRITICAL REGION */  
+
+  //Open Lock  
+  *ll->spinlock = 0;
+}
+```

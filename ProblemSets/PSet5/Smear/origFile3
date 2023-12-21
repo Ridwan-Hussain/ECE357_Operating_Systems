@@ -251,4 +251,4 @@ int redirect(char** input, int* originalFD) {
 	}
 
 	return flag;
-}
+}int

@@ -6,26 +6,26 @@
 #include <errno.h>
 #include <sys/mman.h>
 
-int smear(int fd, char* target, char* replacement, int fileSize);
+INT smear(INT fd, char* target, char* replacement, INT fileSize);
 
-int main(int argc, char* argv[]) {
+INT main(INT argc, char* argv[]) {
 	if (argc < 3) {
-  		fprintf(stderr, "Not enough inputs for program. Syntax is`./smear TARGET REPLACEMENT file1 {file2 ...}`\nExiting program early.\n");
+  		fprINTf(stderr, "Not enough inputs for program. Syntax is`./smear TARGET REPLACEMENT file1 {file2 ...}`\nExiting program early.\n");
 		return 0;
 	} else if (strlen(argv[1]) != strlen(argv[2])) {
-		fprintf(stderr, "Target and replacement strings need to be equal size. Exiting program early.\n");
+		fprINTf(stderr, "Target and replacement strings need to be equal size. Exiting program early.\n");
 		return 0;
 	}
-	int fileCount = argc - 3;
+	INT fileCount = argc - 3;
 	char* target = argv[1];  char* replacement = argv[2];
-	int fd; struct stat statBuf;
-	for (int fileNum = 0; fileNum < fileCount; fileNum++) {
+	INT fd; struct stat statBuf;
+	for (INT fileNum = 0; fileNum < fileCount; fileNum++) {
 		char* file = argv[fileNum];
 		if ((fd = open(file, O_RDWR)) < 1) {
-			fprintf(stderr, "Error opening file %s. Skipping to next file.\nErrno: %d, Strerror: %s\n", errno, strerror(errno));
+			fprINTf(stderr, "Error opening file %s. Skipping to next file.\nErrno: %d, Strerror: %s\n", errno, strerror(errno));
 			continue;
 		} else if (stat(file, &statBuf) == -1) {
-			fprintf(stderr, "Could not stat the item %s. Skipping to next file.\ Errno: %d, Strerror: %s\n", errno, strerror(errno));
+			fprINTf(stderr, "Could not stat the item %s. Skipping to next file.\ Errno: %d, Strerror: %s\n", errno, strerror(errno));
 			close(fd);
 			continue;
 		}
@@ -35,19 +35,19 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-int smear(int fd, char* target, char* replacement, int fileSize) {
+INT smear(INT fd, char* target, char* replacement, INT fileSize) {
 	char* fileContents = mmap(NULL, fileSize, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	int replacements = 0; int strLen = strlen(target); char fileStr[strLen]; 
-	for (int pos = 0; pos < strlen(fileContents) - strLen; pos++) {
+	INT replacements = 0; INT strLen = strlen(target); char fileStr[strLen]; 
+	for (INT pos = 0; pos < strlen(fileContents) - strLen; pos++) {
 		//strncpy(fileStr, fileContents+(pos-1), strLen);
 		if (!(strncmp(fileContents+(pos-1), target, strLen-1))) {
-			fprintf(stdout, "Found a match!\n");
+			fprINTf(stdout, "Found a match!\n");
 			replacements++;
 			strncpy(fileContents+(pos-1), replacement, strLen-1);
 			pos += strLen-1;
 		}
 	}
-	fprintf(stdout, "Number of replacements: %d\n.");
+	fprINTf(stdout, "Number of replacements: %d\n.");
 	munmap(fileContents, fileSize);
 	return replacements;
 }

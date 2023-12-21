@@ -1,0 +1,20 @@
+Part A (page 13): The two lines of assembly checks to see if the system call is 
+a valid system call number by doing a simple bound check. If the system call is 
+not a valid system, then the execution will jump to syscall_badsys which returns 
+the error code and jumps back. If these two lines were not included then the user 
+can input a system call that has an invalid number and access memory that isn't 
+meant for them (any data that is outside of sys_call_table), including sensitive 
+information and changing values they aren't meant to access. 
+
+Part B (page 6): The Task State Segment is activated when the interrupts originated 
+from the user (rather than the kernel). 
+
+Part C: The system halts and is unable to fully boot the system. If this happened 
+due to a network file system, the kernel waits for 90 seconds before timing out. 
+This should cause a kernel panic in order to avoid corruption. 
+
+Part D: TIF_NEED_RESCHED is used to determine when a program should be scheduled 
+out for another program. 1: The timer interrupt comes at its regular interval 
+setting the flag and switching out. 2: This flag can also be on a program which 
+was paused e.g. when a system call is made that can't be handled immediately 
+(i.e. read system call from user input). 3: A process voluntarily yielded previously.

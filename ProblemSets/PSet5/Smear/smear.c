@@ -12,8 +12,8 @@
 int smear(int fd, char* target, char* replacement, int fileSize);
 
 int main(int argc, char* argv[]) {
-	if (argc < 3) {
-  		fprintf(stderr, "Not enough inputs for program. Syntax is`./smear TARGET REPLACEMENT file1 {file2 ...}`\nExiting program early.\n");
+	if (argc < 4) {
+  		fprintf(stderr, "Not enough inputs for program. Syntax is\n`./smear TARGET REPLACEMENT file1 {file2 ...}`\nExiting program early.\n");
 		return 0;
 	} else if (strlen(argv[1]) != strlen(argv[2])) {
 		fprintf(stderr, "Target and replacement strings need to be equal size. Exiting program early.\n");
@@ -25,16 +25,16 @@ int main(int argc, char* argv[]) {
 	for (int fileNum = 0; fileNum < fileCount; fileNum++) {
 		char* file = argv[fileNum+3];
 		if ((fd = open(file, O_RDWR)) < 1) {
-			fprintf(stderr, "Error opening file %s. Skipping to next file.\nErrno: %d, Strerror: %s\n", file, errno, strerror(errno));
+			fprintf(stderr, "Error opening file %s. Skipping to next file.\nErrno: %d, Strerror: %s\n\n", file, errno, strerror(errno));
 			continue;
 		} else if (stat(file, &statBuf) == -1) {
-			fprintf(stderr, "Could not stat the item %s. Skipping to next file.\n Errno: %d, Strerror: %s\n", file, errno, strerror(errno));
+			fprintf(stderr, "Could not stat the item %s. Skipping to next file.\n Errno: %d, Strerror: %s\n\n", file, errno, strerror(errno));
 			close(fd);
 			continue;
 		}
-		fprintf(stdout, "Current File: %s.\n", file);
+		fprintf(stdout, "Current File: %s", file);
 		int replacements = smear(fd, target, replacement, statBuf.st_size);
-		fprintf(stdout, "Number of replacements: %d.\n\n", replacements);
+		fprintf(stdout, ". Number of replacements: %d.\n\n", replacements);
 		close(fd);
 	}
 	return 0;

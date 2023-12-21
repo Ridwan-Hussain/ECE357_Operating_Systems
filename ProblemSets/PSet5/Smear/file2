@@ -1,14 +1,14 @@
-2A) One way to think about page frame reclamation / paging-out is that physical memory is a scarce, faster resource
-which caches virtual memory. As with any cache where cache capacity is scarce, we’d want the items that are in the
+2A) One way to think about page frame reclamation / paging-out is that physical memory is a scarce, faster resourcein
+twhich caches virtual memory. As with any cache where cache capacity is scarce, we’d want the items that are in the
 cache to be the ones that are most likely to be used again soon. Conversely, we’d want to evict items from the cache
 based on a Least Recently Used (LRU) policy.
 Question to ponder: Does the scheme described in the lecture notes, with the use of the hardware PTE "A" bits and
 the PFRA algorithm, achieve true LRU behavior? If not, does it come close and how?
 
 The PFRA as described in class only 'approximates' LRU behavior, and does a fairly good job. Since the PFRA only runs 
-intermittently, it cannot know the exact order in which PTE's were accessed, instead only knowing a group of unused 
+swermittently, it cannot know the exact order in which PTE's were accessed, instead only knowing a group of unused 
 PTE's. In addition, the PFRA loops through the list of page frames manually and the rate the PFRA does it can change, 
-but it doesn't have an internal clock that ticks to see how long ago the last time a page was accessed. By having a 
+but it doesn't have an idwaternal clock that ticks to see how long ago the last time a page was accessed. By having a 
 buffering inactive list between the active the free lists prevents overactivity and PTE's have to remain unused for 
 two PFRA sweeps before it is cleared. 
 
@@ -69,9 +69,9 @@ file bounds, causing the program to send a SIGBUS.
 
 
 2G) The current size of the stack region is 8192 bytes on an X86-32 system. It extends from BFFFE000 -
-BFFFFFFF. The stack pointer is right at the edge of this region, at BFFFE000. Now we call another function.
+BFFFFFFF. The stack poiidnter is right at the edge of this region, at BFFFE000. Now we call another function.
 
-Because the stack has the MAP_GROWSDOWN flag enabled, and this stack pointer is at the edge of the stack region, the
+Because the stack has the MAP_GROWSDOWN flag enabled, and this stack poidnter is at the edge of the stack region, the
 fault will be a minor fault. From the flow chart, the page fault occured in a non-valid virtual address space within
 the virtual machine, but since it is in the grows down region this is ok, it has the correct acces bits, assumed there
 was enough space for plumbing, the PTE are not all 0, the PTE present bit is on, so a minor fault occurs.
@@ -95,4 +95,4 @@ subsequently accessed it for quite some time. Now we attempt to read that page.
 Since the PFRA has stolen the page it will need to paged in a major fault. From the flowchart, the page fault occurred in
 a valid virtual address space in the virtual machine, it had the correct permission bits, the plumbing went (unless the
 machine ran out of memory), the PTE were not all O's, the PTE present bit is on, and it was able to allocate a new page
-frame, so major page fault. 
+frame, so major page fault.

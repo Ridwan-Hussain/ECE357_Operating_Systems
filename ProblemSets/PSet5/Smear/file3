@@ -12,18 +12,18 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-int standardIO[3];
+INT standardIO[3];
 
-int shell(char* scripts);
-int cmdLine(char* cmd, int prevStatus);
-int binCmd(char** args); 
-int pwd();
-int cd(char** args); 
-int redirect(char** input, int* originalFD);
+INT shell(char* scripts);
+INT cmdLine(char* cmd, INT prevStatus);
+INT binCmd(char** args); 
+INT pwd();
+INT cd(char** args); 
+INT redirect(char** input, INT* originalFD);
 
-int main(int argc, char* argv[]) {
+INT main(INT argc, char* argv[]) {
 	char *scripts;
-	for (int i = 0; i < argc - 1; i++) {
+	for (INT i = 0; i < argc - 1; i++) {
 		scripts = (char*)malloc(strlen(argv[i+1]));
 		memcpy(scripts, argv[i+1], strlen(argv[i+1]));
 	}
@@ -31,30 +31,30 @@ int main(int argc, char* argv[]) {
 	return shell(scripts);
 }
 
-int shell(char* scripts) {
-	int status = 0; //I defined -1 is defined as invalid exit status; otherwise will return most recent errno
+INT shell(char* scripts) {
+	INT status = 0; //I defined -1 is defined as invalid exit status; otherwise will return most recent errno
 	if (strlen(scripts)) {
 		//Referred to https://solarianprogrammer.com/2019/04/03/c-programming-read-file-lines-fgets-getline-implement-portable-getline/ 
 		//for reading files line by line in C
 		FILE* scriptFP; char* cmdline; size_t lineLen = 0; 
 		if ((scriptFP = fopen(scripts, "r")) == NULL) {
-			fprintf(stderr, "Error Opening Script File %s\nError Number: %d, String Error: %s\n", scripts, errno, strerror(errno));
+			fprINTf(stderr, "Error Opening Script File %s\nError Number: %d, String Error: %s\n", scripts, errno, strerror(errno));
 			free(scripts);
 			return errno;
 		}
 		while(getline(&cmdline, &lineLen, scriptFP) != -1) {
-			fprintf(stdout, "$> %s\n", cmdline);
+			fprINTf(stdout, "$> %s\n", cmdline);
 			status = cmdLine(cmdline, status);
 		}
 		free(scripts);
 		return errno;
 	}
-	char userInput[BUFSIZE]; int c;
+	char userInput[BUFSIZE]; INT c;
 	while(1) { 
-		fprintf(stdout, "$> ");
+		fprINTf(stdout, "$> ");
 		while ((fgets(userInput, BUFSIZE, stdin)) == NULL) {
 			if ((c = getchar()) == EOF) {
-				fprintf(stdout, "\n");
+				fprINTf(stdout, "\n");
 				return status;
 			}
 		}//Referenced GeeksForGeeks for how to use fgets: https://www.geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
@@ -68,10 +68,10 @@ int shell(char* scripts) {
 	return status; //this returns after all the scripts have been read if there were scripts
 }
 
-int cmdLine(char* cmdline, int prevStatus) { 
-	int numOfArgs = 1; int pid;
-	char redirects[3][BUFSIZE] = {'\0'}; int redir;
-	for (int i = 0; i < strlen(cmdline); i ++ ) {
+INT cmdLine(char* cmdline, INT prevStatus) { 
+	INT numOfArgs = 1; INT pid;
+	char redirects[3][BUFSIZE] = {'\0'}; INT redir;
+	for (INT i = 0; i < strlen(cmdline); i ++ ) {
 		if (cmdline[i] == ' ') { numOfArgs++; }
 	}
 	//Referenced GeeksForGeeks on how to use strtok: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
@@ -83,12 +83,12 @@ int cmdLine(char* cmdline, int prevStatus) {
 	}
 	
 	//File Descriptor table for my commands
-	int fd[numOfArgs]; fd[0] = 0;
+	INT fd[numOfArgs]; fd[0] = 0;
 	
 	//Used later on to see if redirection occurred and undo it
 	standardIO[0] = -1; standardIO[1] = -1; standardIO[2] = -1;
 	
-	for (int i = 1; i < numOfArgs; i++) {
+	for (INT i = 1; i < numOfArgs; i++) {
 		args[i] = strtok(0, delim); 
 		//If a redirection occurs, we don't want that as an argument for the command
 		if (redir = redirect(&(args[i]), &fd[i])) { 
@@ -103,7 +103,7 @@ int cmdLine(char* cmdline, int prevStatus) {
 				strcpy(redirects[2], "Standard Error: ");
 				strcat(redirects[2], args[i]);
 			}
-			for (int j = i; j < numOfArgs - 1; j++) {
+			for (INT j = i; j < numOfArgs - 1; j++) {
 				args[j] = args[j+1];
 			}
 			args[numOfArgs-1] = '\0';
@@ -123,18 +123,18 @@ int cmdLine(char* cmdline, int prevStatus) {
 			exit(prevStatus);
 		} else {
 			//Since errno is normally 0 or (+) value, I set status = -1 if there's an error with exiting.
-			fprintf(stderr, "Error exiting program. Exit value was not an integer. Exiting with value -1.\n");
+			fprINTf(stderr, "Error exiting program. Exit value was not an INTeger. Exiting with value -1.\n");
 			exit(-1);
 		}
 	} else {
 		switch (pid = fork()) {
 			case -1: 
-				fprintf(stderr, "Fork failed in binCmd.\n");
+				fprINTf(stderr, "Fork failed in binCmd.\n");
 				break;
 			case 0:
-				for (int i = 0; i < 3; i++) {
+				for (INT i = 0; i < 3; i++) {
 					if (strlen(redirects[i])) {	
-						fprintf(stderr, "%s\n", redirects[i]);	
+						fprINTf(stderr, "%s\n", redirects[i]);	
 					}
 				}
 				return binCmd(args);
@@ -144,74 +144,74 @@ int cmdLine(char* cmdline, int prevStatus) {
 				struct rusage ru;
 				unsigned wstatus;
 				if (wait4(pid, &wstatus, 0, &ru) == -1) {
-					fprintf(stderr, "Wait system call failed\n");
+					fprINTf(stderr, "Wait system call failed\n");
 					return errno;
 				}
-				fprintf(stderr, "Child PID %d. Usertime: %ld.%.6d secs\nSystemtime: %ld.%.6d secs\nReal time: %ld.%.6d secs\n", 
+				fprINTf(stderr, "Child PID %d. Usertime: %ld.%.6d secs\nSystemtime: %ld.%.6d secs\nReal time: %ld.%.6d secs\n", 
 						pid, ru.ru_utime.tv_sec, ru.ru_utime.tv_usec, ru.ru_stime.tv_sec, ru.ru_stime.tv_usec, 
 						postfork.tv_sec-prefork.tv_sec, postfork.tv_usec-prefork.tv_usec);
 				if (wstatus != 0) {
 					if (WIFSIGNALED(wstatus)) {
-						fprintf(stderr, "Exited with signal: %d\n", WTERMSIG(wstatus));
+						fprINTf(stderr, "Exited with signal: %d\n", WTERMSIG(wstatus));
 						return WTERMSIG(wstatus);
 					} else {
-						fprintf(stderr, "Exited with return value: %d\n", WEXITSTATUS(wstatus));
+						fprINTf(stderr, "Exited with return value: %d\n", WEXITSTATUS(wstatus));
 						return WEXITSTATUS(wstatus);
 					}
 				}
-				for (int i = 0; i < 3; i++) {
+				for (INT i = 0; i < 3; i++) {
 					if (standardIO[i] != -1) {
 						dup2(standardIO[i], i);
 						close(standardIO[i]);
 					}
 				}
-				fprintf(stderr, "Exited with return value: 0\n");
-				return wstatus; //should be 0 at this point
+				fprINTf(stderr, "Exited with return value: 0\n");
+				return wstatus; //should be 0 at this poINT
 		}
 	}
 }
 
-int binCmd(char** args) { 
+INT binCmd(char** args) { 
 	if (execvp(args[0], args) == -1) {
-		fprintf(stderr, "Execvp Failed for CMD: %s\nErrno: %d, Strerror: %s\n", args[0], errno, strerror(errno));
+		fprINTf(stderr, "Execvp Failed for CMD: %s\nErrno: %d, Strerror: %s\n", args[0], errno, strerror(errno));
 		return errno;
 	}
 	return 0;
 }
 
-int pwd() { 
+INT pwd() { 
 	char cwd[BUFSIZE];
 	if (getcwd(cwd, BUFSIZE) == NULL) {
-		fprintf(stderr, "Error with getcwd.\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
+		fprINTf(stderr, "Error with getcwd.\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
 		return errno;
 	}
-	fprintf(stdout, "Path: %s\n", cwd);
+	fprINTf(stdout, "Path: %s\n", cwd);
 	return 0;
 }
 
-int cd(char** args) { 
-	int pid;
+INT cd(char** args) { 
+	INT pid;
 	if (args[1] == NULL) {
 		if (chdir(getenv("HOME")) == -1) { //cd to home if command is "cd"
-			fprintf(stderr, "Error with chdir for HOME\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
+			fprINTf(stderr, "Error with chdir for HOME\nErrno: %d, Strerr: %s\n", errno, strerror(errno));
 			return errno;
 		}
 	} else if (chdir(args[1]) == -1) {
-		fprintf(stderr, "Error with chdir for path: %s\nErrno: %d, Strerr: %s\n", args[1], errno, strerror(errno));
+		fprINTf(stderr, "Error with chdir for path: %s\nErrno: %d, Strerr: %s\n", args[1], errno, strerror(errno));
 		return errno;
 	}
-	pwd(); //print working directory after the cd command
+	pwd(); //prINT working directory after the cd command
 	return 0;
 }
 
-int redirect(char** input, int* originalFD) {
+INT redirect(char** input, INT* originalFD) {
 	//(input)    0 - no redirection 
 	//(<input)   1 - openfile & redirect stdin (FD = 0)
 	//(>input)   2 - open/create/truncate file and redirect stdout (FD = 1)
 	//(2>input)  3 - open/create/truncate file and redirect stderr (FD = 2)
 	//(>>input)  4 - open/create/append file and redirect stdout
 	//(2>>input) 5 - open/create/append file and redirect stderr
-	int flag = 0;
+	INT flag = 0;
 	if (!(strncmp("<", *input, 1))) {
 		flag = 1;
 		++(*input);
@@ -251,4 +251,4 @@ int redirect(char** input, int* originalFD) {
 	}
 
 	return flag;
-}
+}INT
